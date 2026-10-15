@@ -1,0 +1,45 @@
+name: Build Android APK for WortBrücke
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. سحب الكود المصدري للمشروع
+        uses: actions/checkout@v4
+
+      - name: 2. إعداد بيئة Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 3. إعداد بيئة Java 17 لتطوير الأندرويد
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 4. تثبيت أداة Capacitor وحزم بناء الأندرويد
+        run: |
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: 5. تهيئة مشروع Capacitor وإضافة منصة الأندرويد
+        run: |
+          npx cap init WortBrücke com.wortbruecke.app --web-dir .
+          npx cap add android
+
+      - name: 6. بناء حزمة التطبيق الثنائية (Debug APK)
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: 7. رفع ملف الـ APK الناتج ليكون جاهزاً للتنزيل المباشر
+        uses: actions/upload-artifact@v4
+        with:
+          name: WortBrücke-Pro-App
+          path: android/app/build/outputs/apk/debug/app-debug.apk
