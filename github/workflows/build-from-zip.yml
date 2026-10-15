@@ -1,0 +1,66 @@
+
+name: Build WortBruecke APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'wortbruecke-build-kit.zip'
+      - '.github/workflows/build-from-zip.yml'
+
+permissions
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract project files
+        run: |
+          unzip -q wortbruecke-build-kit.zip -d .
+          cd wortbruecke-build-kit
+          test -f package.json
+          test -f capacitor.config.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install packages
+        working-directory: wortbruecke-build-kit
+        run: npm install
+
+      - name: Build web app
+        working-directory: wortbruecke-build-kit
+        run: npm run build
+
+      - name: Create Android project
+        working-directory: wortbruecke-build-kit
+        run: npx cap add android
+
+      - name: Sync Android
+        working-directory: wortbruecke-build-kit
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: wortbruecke-build-kit/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WortBruecke-APK
+          path: wortbruecke-build-kit/android/app/build/outputs/apk/debug/app-debug.apk
